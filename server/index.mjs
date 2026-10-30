@@ -29,6 +29,8 @@ export async function createApp(options = {}) {
     }
   }
   const db = openStore(resolve(dataDir,'minute.sqlite'));
+  // SQLite's built-in lower() only handles ASCII; normalize case for Russian and English.
+  db.function('search_fold', {deterministic:true}, value=>String(value ?? '').normalize('NFKC').toLocaleLowerCase('ru'));
   const appId=options.appId ?? process.env.APP_ID ?? primaryApp;
   if (appId && ![...apps.map(a=>a[0]),'mischief'].includes(appId)) throw new Error('Unknown APP_ID');
   const adminToken = options.adminToken ?? process.env.ADMIN_TOKEN ?? '';
@@ -182,9 +184,10 @@ export async function createApp(options = {}) {
         }
         if (path==='/api/finds' && method==='GET') {
           const category=url.searchParams.get('category') ?? '';
+          const query=text(url.searchParams.get('q') ?? '',80,0).normalize('NFKC').toLocaleLowerCase('ru');
           const page=Math.min(10000,Math.max(0,Number(url.searchParams.get('page'))||0));
           const order=url.searchParams.get('sort')==='top' ? 'votes DESC,created DESC':'created DESC';
-          const entries=db.prepare(`SELECT ${postFields},EXISTS(SELECT 1 FROM votes v WHERE v.scope='finds' AND v.target=posts.id AND v.voter=?) AS voted FROM posts WHERE kind='finds' AND status='approved' AND (?='' OR category=?) ORDER BY ${order} LIMIT 13 OFFSET ?`).all(sid,category,category,Math.floor(page)*12);
+          const entries=db.prepare(`SELECT ${postFields},EXISTS(SELECT 1 FROM votes v WHERE v.scope='finds' AND v.target=posts.id AND v.voter=?) AS voted FROM posts WHERE kind='finds' AND status='approved' AND (?='' OR category=?) AND (?='' OR instr(search_fold(title),?)>0 OR instr(search_fold(body),?)>0) ORDER BY ${order} LIMIT 13 OFFSET ?`).all(sid,category,category,query,query,query,Math.floor(page)*12);
           return json(res,{entries:entries.slice(0,12),hasMore:entries.length>12});
         }
         if (path==='/api/find' && method==='GET') {

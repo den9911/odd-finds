@@ -119,6 +119,7 @@ test('all community workflows persist and enforce their invariants',async t=>{
   await t.test('uploads: size and signature checks, private queue, moderation, reports',async()=>{
     const upload=await alice('/api/posts',{kind:'finds',title:'Загадочная вывеска',body:'Тестовая находка',category:'Вывески',image:png});assert.equal(upload.status,201);imageId=upload.body.id;
     assert.equal((await bob('/api/finds')).body.entries.length,0);
+    assert.equal((await bob('/api/finds?q='+encodeURIComponent('загадочная'))).body.entries.length,0);
     assert.equal((await bob(`/api/find?id=${imageId}`)).status,404);
     assert.equal((await bob(`/media/${imageId}`)).status,401);
     assert.equal((await alice('/api/admin')).status,401);
@@ -131,6 +132,10 @@ test('all community workflows persist and enforce their invariants',async t=>{
     const media=await bob(`/media/${imageId}`);assert.equal(media.status,200);assert.equal(media.headers.get('content-type'),'image/png');
     assert.equal((await bob(`/media/${imageId}`,undefined,{'If-None-Match':media.headers.get('etag')})).status,304);
     assert.equal((await bob('/api/finds/vote',{id:imageId})).status,200);assert.equal((await bob('/api/finds/vote',{id:imageId})).status,409);
+    const matching=(await bob('/api/finds?q='+encodeURIComponent('ЗАГАДОЧНАЯ'))).body.entries;
+    assert.deepEqual(matching.map(p=>p.id),[imageId]);
+    assert.equal((await bob('/api/finds?q='+encodeURIComponent('ТЕСТОВАЯ'))).body.entries[0].id,imageId);
+    assert.equal((await bob('/api/finds?q='+encodeURIComponent('несуществующийпоиск'))).body.entries.length,0);
     assert.equal((await bob('/api/report',{id:imageId,reason:'Проверка жалобы'})).status,200);
     assert.equal((await alice('/api/admin',undefined,admin)).body.posts[0].reports,1);
     assert.equal((await alice('/api/admin/moderate',{id:imageId,action:'delete'},admin)).status,200);

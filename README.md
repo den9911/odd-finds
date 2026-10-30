@@ -23,6 +23,7 @@ Collect funny signs, strange notices, and things that deserve a second look.
 ## Features
 
 - A community collection of visual finds
+- Search approved finds by title and description
 - Image submissions reviewed before publication
 - JPEG, PNG, and WebP input with browser compression
 
