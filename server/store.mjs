@@ -49,6 +49,8 @@ export function openStore(filename) {
       UPDATE uploads_usage SET bytes=bytes-OLD.bytes WHERE id=1;
     END;
   `);
+  const columns=db.prepare('PRAGMA table_info(posts)').all();
+  if(!columns.some(c=>c.name==='alt'))db.exec("ALTER TABLE posts ADD COLUMN alt TEXT NOT NULL DEFAULT ''");
   const insert = db.prepare('INSERT OR IGNORE INTO posts(id,kind,title,body,category,owner,status,created) VALUES (?,?,?,?,?,?,?,?)');
   seedMemes.forEach(([title, body, color], i) => insert.run(`seed-${i}`, 'arena', title, body, color, 'editor', 'approved', i));
   return db;
@@ -59,3 +61,4 @@ export function transaction(db, action) {
   try { const result = action(); db.exec('COMMIT'); return result; }
   catch (error) { db.exec('ROLLBACK'); throw error; }
 }
+

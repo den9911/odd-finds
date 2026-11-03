@@ -1,3 +1,4 @@
+import {checkStartup} from './startup.mjs';
 import { createServer } from 'node:http';
 import { randomUUID, randomBytes, createHmac, timingSafeEqual, createHash } from 'node:crypto';
 import { mkdir, readFile, writeFile, stat } from 'node:fs/promises';
@@ -13,7 +14,7 @@ import { primaryApp } from './project.mjs';
 const zip = promisify(gzip);
 const publicRoot = fileURLToPath(new URL('../public/', import.meta.url));
 const MIME = { '.html':'text/html; charset=utf-8', '.css':'text/css; charset=utf-8', '.js':'text/javascript; charset=utf-8', '.svg':'image/svg+xml', '.json':'application/json; charset=utf-8', '.ico':'image/x-icon' };
-const postFields = 'id,kind,title,body,category,day,status,votes,created,CASE WHEN image IS NULL THEN 0 ELSE 1 END AS hasImage';
+const postFields = 'id,kind,title,body,alt,category,day,status,votes,created,CASE WHEN image IS NULL THEN 0 ELSE 1 END AS hasImage';
 
 /** One HTTP process, one SQLite writer; do not run multiple cluster workers on the same database. */
 export async function createApp(options = {}) {
@@ -169,7 +170,7 @@ export async function createApp(options = {}) {
           throttle(req,'publish',8);
           if (!adminToken) throw new HttpError(503,'Загрузка откроется после настройки модерации.');
           if (!['arena','finds'].includes(input.kind) || (appId && input.kind!==appId)) throw new HttpError(400,'Неизвестный раздел.');
-          const title=text(input.title,120), description=text(input.body ?? '',400,0);
+          const title=text(input.title,120), description=text(input.body ?? '',400,0),alt=text(input.alt??'',240,0);
           const category=input.kind==='finds' ? text(input.category,30) : '';
           if (input.kind==='finds' && !['Вывески','Объявления','Предметы','Другое'].includes(category)) throw new HttpError(400,'Неизвестная категория.');
           const {image,mime,bytes}=decodeImage(input.image);
@@ -178,7 +179,7 @@ export async function createApp(options = {}) {
           transaction(db,()=>{
             const used=db.prepare('SELECT bytes FROM uploads_usage WHERE id=1').get().bytes;
             if (used+bytes>uploadBudget) throw new HttpError(507,'Место для новых картинок закончилось.');
-            db.prepare('INSERT INTO posts(id,kind,title,body,category,owner,status,created,image,mime,bytes) VALUES(?,?,?,?,?,?,?,?,?,?,?)').run(id,input.kind,title,description,category,sid,'pending',Date.now(),image,mime,bytes);
+            db.prepare('INSERT INTO posts(id,kind,title,body,category,owner,status,created,image,mime,bytes,alt) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)').run(id,input.kind,title,description,category,sid,'pending',Date.now(),image,mime,bytes,alt);
           });
           return json(res,{id,status:'pending'},201);
         }
@@ -263,6 +264,12 @@ export async function createApp(options = {}) {
             const usage=db.prepare('SELECT bytes FROM uploads_usage WHERE id=1').get().bytes;
             return json(res,{posts,usage,budget:uploadBudget});
           }
+          if (path==='/api/admin/description' && method==='POST') {
+            const id=text(input.id,50),alt=text(input.alt??'',240,0);
+            const post=db.prepare('SELECT kind FROM posts WHERE id=?').get(id);
+            if(!post||(appId&&post.kind!==appId))throw new HttpError(404,'Публикация не найдена.');
+            db.prepare('UPDATE posts SET alt=? WHERE id=?').run(alt,id);return json(res,{ok:true});
+          }
           if (path==='/api/admin/moderate' && method==='POST') {
             const id=text(input.id,50);
             if (input.action==='approve') db.prepare("UPDATE posts SET status='approved' WHERE id=?").run(id);
@@ -322,10 +329,18 @@ export async function createApp(options = {}) {
 }
 
 if (process.argv[1] && resolve(process.argv[1])===fileURLToPath(import.meta.url)) {
-  const {server}=await createApp();
   const portFlag=process.argv.indexOf('--port'),hostFlag=process.argv.indexOf('--host');
   const port=Number(portFlag>=0?process.argv[portFlag+1]:process.env.PORT??3000);
   const host=hostFlag>=0?process.argv[hostFlag+1]:process.env.HOST??'127.0.0.1';
-  server.listen(port,host,()=>console.log(`Minute Club listening on ${JSON.stringify(server.address())}`));
-  for (const signal of ['SIGINT','SIGTERM']) process.on(signal,()=>server.close(()=>process.exit(0)));
+  try{
+    if(typeof host!=='string'||!host.trim())throw new Error('Provide a HOST or --host value / Укажите HOST');
+    const checked=await checkStartup({port,host});
+    if(process.argv.includes('--check'))console.log(`Startup checks passed / Проверки запуска пройдены: ${JSON.stringify(checked)}`);
+    else{
+      const {server}=await createApp();
+      server.on('error',()=>{console.error('Cannot start server; check local address and permissions / Не удалось запустить сервер');process.exitCode=1;server.close();});
+      server.listen(port,host,()=>console.log(`Minute Club listening on ${JSON.stringify(server.address())}`));
+      for(const signal of ['SIGINT','SIGTERM'])process.on(signal,()=>server.close(()=>process.exit(0)));
+    }
+  }catch(error){console.error(error.message??'Startup failed / Ошибка запуска');process.exitCode=1;}
 }

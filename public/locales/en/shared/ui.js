@@ -72,7 +72,7 @@ export function imageUpload(form) {
   return ()=>{if(working)throw new Error('Please wait for the image to finish compressing.');if(!image)throw new Error('Add a picture first.');return image;};
 }
 export function uploadForm(kind) {
-  return `<form id="upload" class="panel stack"><h2>${kind==='arena'?'A new contender':'A new discovery'}</h2><label>Title<input name="title" maxlength="120" required placeholder="What is happening here?"></label><label>A little context<textarea name="body" maxlength="400" rows="2" placeholder="Optional"></textarea></label>${kind==='finds'?'<label>Category<select name="category"><option value="\u0412\u044b\u0432\u0435\u0441\u043a\u0438">Signs</option><option value="\u041e\u0431\u044a\u044f\u0432\u043b\u0435\u043d\u0438\u044f">Notices</option><option value="\u041f\u0440\u0435\u0434\u043c\u0435\u0442\u044b">Objects</option><option value="\u0414\u0440\u0443\u0433\u043e\u0435">Other</option></select></label>':''}<label class="file-drop">Choose a picture<input type="file" accept="image/jpeg,image/png,image/webp" required></label><img class="upload-preview" alt="Upload preview" width="400" height="240" hidden><p class="upload-status muted">JPEG, PNG or WebP. We will compress to 500 KB right here.</p><button type="submit">Submit for review <span aria-hidden="true">↗</span></button><p class="small muted">Share your own work or material you have permission to publish.</p></form>`;
+  return `<form id="upload" class="panel stack"><h2>${kind==='arena'?'A new contender':'A new discovery'}</h2><label>Title<input name="title" maxlength="120" required placeholder="What is happening here?"></label><label>Image description<input name="alt" maxlength="240" placeholder="Briefly describe what is visible in the image"></label><label>A little context<textarea name="body" maxlength="400" rows="2" placeholder="Optional"></textarea></label>${kind==='finds'?'<label>Category<select name="category"><option value="\u0412\u044b\u0432\u0435\u0441\u043a\u0438">Signs</option><option value="\u041e\u0431\u044a\u044f\u0432\u043b\u0435\u043d\u0438\u044f">Notices</option><option value="\u041f\u0440\u0435\u0434\u043c\u0435\u0442\u044b">Objects</option><option value="\u0414\u0440\u0443\u0433\u043e\u0435">Other</option></select></label>':''}<label class="file-drop">Choose a picture<input type="file" accept="image/jpeg,image/png,image/webp" required></label><img class="upload-preview" alt="Upload preview" width="400" height="240" hidden><p class="upload-status muted">JPEG, PNG or WebP. We will compress to 500 KB right here.</p><button type="submit">Submit for review <span aria-hidden="true">↗</span></button><p class="small muted">Share your own work or material you have permission to publish.</p></form>`;
 }
 export function wireUpload(kind) {
   const form=$('#upload'),image=imageUpload(form);
@@ -91,7 +91,7 @@ export function wireReports() {
   }));
 }
 export function memeCard(post, button = true) {
-  return `<article class="meme panel ${post.hasImage?'':'meme-text'}" data-seed="${escape(post.id)}">${post.hasImage?`<img src="/media/${escape(post.id)}" loading="lazy" width="480" height="320" alt="${escape(post.title)}">`:`<div class="meme-poster"><p>${escape(post.title)}</p><div class="poster-face" aria-hidden="true">:)</div><p>${escape(post.body)}</p></div>`}${post.hasImage?`<h3>${escape(post.title)}</h3><p>${escape(post.body)}</p>`:''}${button?`<button class="pick" data-id="${escape(post.id)}">This one wins <span aria-hidden="true">↗</span></button>`:`<p class="small muted">Wins: ${post.votes}</p>`}</article>`;
+  return `<article class="meme panel ${post.hasImage?'':'meme-text'}" data-seed="${escape(post.id)}">${post.hasImage?`<img src="/media/${escape(post.id)}" loading="lazy" width="480" height="320" alt="${escape(post.alt||post.title)}">`:`<div class="meme-poster"><p>${escape(post.title)}</p><div class="poster-face" aria-hidden="true">:)</div><p>${escape(post.body)}</p></div>`}${post.hasImage?`${post.alt?`<details><summary>Image description</summary><p>${escape(post.alt)}</p></details>`:''}<h3>${escape(post.title)}</h3><p>${escape(post.body)}</p>`:''}${button?`<button class="pick" data-id="${escape(post.id)}">This one wins <span aria-hidden="true">↗</span></button>`:`<p class="small muted">Wins: ${post.votes}</p>`}</article>`;
 }
 export function wrapText(ctx,text,x,y,maxWidth,lineHeight,maxLines=8) {
   let line='',lines=0;
@@ -104,3 +104,4 @@ export function wrapText(ctx,text,x,y,maxWidth,lineHeight,maxLines=8) {
   }
   if(line)ctx.fillText(line,x,y);return y+lineHeight;
 }
+

@@ -76,3 +76,12 @@ npm run check
 ---
 
 [Другие проекты den9911](https://github.com/den9911) · [Сообщить о проблеме](https://github.com/den9911/odd-finds/issues) · [LICENSE](LICENSE)
+
+
+## Recent improvements / Последние улучшения
+
+Image submissions accept an optional description up to 240 characters. It is used as alt text, with the title as a legacy fallback, and can be edited by a moderator without changing publication status. User descriptions are not automatically translated.
+
+У загрузки есть описание до 240 символов для alt; модератор может исправить его без смены статуса. Старые записи используют заголовок, пользовательский текст автоматически не переводится.
+
+Startup diagnostics / Проверка запуска: `node server/index.mjs --check` checks the local address, configuration and writable data location without creating a database or starting the API. To use another port: `--port 3005`. No tokens are printed. / База и сервер при проверке не создаются; секреты не выводятся.
