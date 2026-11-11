@@ -1,7 +1,8 @@
 FROM node:24-alpine
 ENV NODE_ENV=production HOST=0.0.0.0 PORT=3000 DATA_DIR=/app/data
 WORKDIR /app
-COPY --chown=node:node package.json ./
+COPY --chown=node:node package.json package-lock.json ./
+RUN npm ci --omit=dev
 COPY --chown=node:node server ./server
 COPY --chown=node:node public ./public
 RUN mkdir -p /app/data && chown node:node /app/data

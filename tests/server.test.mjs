@@ -10,7 +10,7 @@ import { decodeImage, integer, text, validDay, HttpError } from '../server/valid
 import { transaction } from '../server/store.mjs';
 import { primaryApp } from '../server/project.mjs';
 
-const png='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl6jJ8AAAAASUVORK5CYII=';
+const png='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAADUlEQVQImWM4o+TyHwAFIgIydrRIXQAAAABJRU5ErkJggg==';
 async function listen(app){app.server.listen(0,'127.0.0.1');await once(app.server,'listening');return `http://127.0.0.1:${app.server.address().port}`;}
 async function close(server){await new Promise((resolve,reject)=>server.close(error=>error?reject(error):resolve()));}
 function client(base){let cookie='';return async(path,input,headers={})=>{

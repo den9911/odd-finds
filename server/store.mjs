@@ -16,6 +16,7 @@ export function openStore(filename) {
     );
     CREATE INDEX IF NOT EXISTS posts_feed ON posts(kind,status,created DESC);
     CREATE INDEX IF NOT EXISTS posts_day ON posts(day,kind,status,votes DESC);
+    CREATE TABLE IF NOT EXISTS upload_receipts(owner TEXT NOT NULL,request_id TEXT NOT NULL,fingerprint TEXT NOT NULL,id TEXT NOT NULL,PRIMARY KEY(owner,request_id));
     CREATE TABLE IF NOT EXISTS votes (
       scope TEXT NOT NULL, target TEXT NOT NULL, voter TEXT NOT NULL,
       choice TEXT NOT NULL DEFAULT '', created INTEGER NOT NULL,

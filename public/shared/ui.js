@@ -76,10 +76,11 @@ export function uploadForm(kind) {
 }
 export function wireUpload(kind) {
   const form=$('#upload'),image=imageUpload(form);
+  let requestId=crypto.randomUUID();form.addEventListener('input',()=>{requestId=crypto.randomUUID();});
   action(form,async()=>{
     const fields=Object.fromEntries(new FormData(form));
-    await api('/api/posts',{...fields,kind,image:image()});
-    form.reset();$('.upload-preview',form).hidden=true;$('.upload-status',form).textContent='Отправлено. Публикация появится после проверки.';toast('Принято! Теперь дождёмся модератора.');
+    await api('/api/posts',{...fields,kind,requestId,image:image()});
+    requestId=crypto.randomUUID();form.reset();$('.upload-preview',form).hidden=true;$('.upload-status',form).textContent='Отправлено. Публикация появится после проверки.';toast('Принято! Теперь дождёмся модератора.');
   },'submit');
 }
 export function reportButton(id) {return `<button class="text-button report" data-id="${escape(id)}" aria-label="Пожаловаться на публикацию">Пожаловаться</button>`;}

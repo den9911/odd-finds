@@ -76,10 +76,11 @@ export function uploadForm(kind) {
 }
 export function wireUpload(kind) {
   const form=$('#upload'),image=imageUpload(form);
+  let requestId=crypto.randomUUID();form.addEventListener('input',()=>{requestId=crypto.randomUUID();});
   action(form,async()=>{
     const fields=Object.fromEntries(new FormData(form));
-    await api('/api/posts',{...fields,kind,image:image()});
-    form.reset();$('.upload-preview',form).hidden=true;$('.upload-status',form).textContent='Submitted. It will appear after review.';toast('Received! A moderator will take a look.');
+    await api('/api/posts',{...fields,kind,requestId,image:image()});
+    requestId=crypto.randomUUID();form.reset();$('.upload-preview',form).hidden=true;$('.upload-status',form).textContent='Submitted. It will appear after review.';toast('Received! A moderator will take a look.');
   },'submit');
 }
 export function reportButton(id) {return `<button class="text-button report" data-id="${escape(id)}" aria-label="Report this post">Report</button>`;}

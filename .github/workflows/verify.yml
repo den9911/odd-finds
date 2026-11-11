@@ -1,12 +1,7 @@
 name: Verify
-on:
-  push:
-  pull_request:
+on: [push, pull_request]
 permissions:
   contents: read
-concurrency:
-  group: verify-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
 jobs:
   verify:
     runs-on: ubuntu-latest
@@ -16,12 +11,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      # No dependencies or lockfile: use Node's built-in test runner directly.
-      - name: Build localizations
-        run: npm run build
-      - name: Ensure generated files are committed
-        run: git diff --exit-code
-      - name: Test application and startup diagnostics
-        run: npm test
-      - name: Check syntax, local links and asset budgets
-        run: npm run check
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: git diff --exit-code
+      - run: npm test
+      - run: npm run check

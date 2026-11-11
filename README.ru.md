@@ -1,3 +1,5 @@
+> Node.js 24+: run `npm ci` before first launch / Перед первым запуском выполните `npm ci`.
+
 <div align="center">
 
 <img src="assets/icon.svg" width="88" height="88" alt="Odd Finds">
@@ -46,6 +48,7 @@
 Нужен **Node.js 24+**. Для запуска установка пакетов и сборка не требуются.
 
 ```sh
+npm ci
 npm start
 ```
 
@@ -85,3 +88,10 @@ Image submissions accept an optional description up to 240 characters. It is use
 У загрузки есть описание до 240 символов для alt; модератор может исправить его без смены статуса. Старые записи используют заголовок, пользовательский текст автоматически не переводится.
 
 Startup diagnostics / Проверка запуска: `node server/index.mjs --check` checks the local address, configuration and writable data location without creating a database or starting the API. To use another port: `--port 3005`. No tokens are printed. / База и сервер при проверке не создаются; секреты не выводятся.
+
+
+## Pixel decoding and upload retry — 12 November
+
+Install with npm ci (Node.js 24); sharp 0.35.5 is now a pinned runtime dependency. A successful signature/dimension inspection is followed by a complete raw pixel decode with strict warning handling. PNG/JPEG/WebP stay supported. Limits: 500,000 input bytes, 2048×2048 pixels, two active decodes, no waiting queue, native decoder timeout 3 seconds, disabled libvips cache and one thread per operation. These are work limits, not a measured hard process-RSS limit or sandbox. Invalid images are never inserted as pending. The original accepted buffer is stored; server metadata stripping is not claimed by this change.
+
+The browser attaches requestId and keeps it for an unchanged retry. A matching owner/key/payload returns the saved post; changed payload with the same key returns 409, a deleted post returns 410. Receipt and post are committed together, with a second lookup inside the transaction to handle simultaneous decodes. Editing the form creates a new key. Reload/legacy clients without requestId do not get a global deduplication guarantee. Receipts retain only owner, key, fingerprint and post ID; total retention remains a separate policy. Back up before the additive table migration. Docker now installs pinned production dependencies.

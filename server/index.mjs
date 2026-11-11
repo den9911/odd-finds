@@ -1,3 +1,4 @@
+import {decodePixels} from './image-decoder.mjs';
 import {checkStartup} from './startup.mjs';
 import { createServer } from 'node:http';
 import { randomUUID, randomBytes, createHmac, timingSafeEqual, createHash } from 'node:crypto';
@@ -173,15 +174,38 @@ export async function createApp(options = {}) {
           const title=text(input.title,120), description=text(input.body ?? '',400,0),alt=text(input.alt??'',240,0);
           const category=input.kind==='finds' ? text(input.category,30) : '';
           if (input.kind==='finds' && !['Вывески','Объявления','Предметы','Другое'].includes(category)) throw new HttpError(400,'Неизвестная категория.');
-          const {image,mime,bytes}=decodeImage(input.image);
+          const requestId=input.requestId??null;
+          if(requestId!==null&&(typeof requestId!=='string'||! /^[a-zA-Z0-9-]{16,64}$/.test(requestId)))throw new HttpError(400,'Некорректный адрес.');
+          const fingerprint=createHash('sha256').update(JSON.stringify([input.kind,title,description,alt,category,input.image])).digest('hex');
+          if(requestId){
+            const receipt=db.prepare('SELECT fingerprint,id FROM upload_receipts WHERE owner=? AND request_id=?').get(sid,requestId);
+            if(receipt){
+              if(receipt.fingerprint!==fingerprint)throw new HttpError(409,'Запрос изменился. Начните новую отправку.');
+              const saved=db.prepare('SELECT status FROM posts WHERE id=?').get(receipt.id);
+              if(!saved)throw new HttpError(410,'Публикация удалена.');
+              return json(res,{id:receipt.id,status:saved.status,duplicate:true});
+            }
+          }
+          const {image,mime,bytes}=await decodePixels(input.image);
           if (!image) throw new HttpError(400,'Добавьте картинку.');
           const id=randomUUID();
-          transaction(db,()=>{
+          const result=transaction(db,()=>{
+            if(requestId){
+              const previous=db.prepare('SELECT fingerprint,id FROM upload_receipts WHERE owner=? AND request_id=?').get(sid,requestId);
+              if(previous){
+                if(previous.fingerprint!==fingerprint)throw new HttpError(409,'Запрос изменился. Начните новую отправку.');
+                const saved=db.prepare('SELECT status FROM posts WHERE id=?').get(previous.id);
+                if(!saved)throw new HttpError(410,'Публикация удалена.');
+                return {id:previous.id,status:saved.status,duplicate:true};
+              }
+            }
             const used=db.prepare('SELECT bytes FROM uploads_usage WHERE id=1').get().bytes;
             if (used+bytes>uploadBudget) throw new HttpError(507,'Место для новых картинок закончилось.');
             db.prepare('INSERT INTO posts(id,kind,title,body,category,owner,status,created,image,mime,bytes,alt) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)').run(id,input.kind,title,description,category,sid,'pending',Date.now(),image,mime,bytes,alt);
+            if(requestId)db.prepare('INSERT INTO upload_receipts VALUES(?,?,?,?)').run(sid,requestId,fingerprint,id);
+            return {id,status:'pending',duplicate:false};
           });
-          return json(res,{id,status:'pending'},201);
+          return json(res,result,result.duplicate?200:201);
         }
         if (path==='/api/finds' && method==='GET') {
           const category=url.searchParams.get('category') ?? '';

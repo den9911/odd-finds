@@ -1,6 +1,8 @@
+> Node.js 24+: run `npm ci` before first launch / Перед первым запуском выполните `npm ci`.
+
 # Minute Club
 
-Ten small web projects with Russian interfaces, a shared lightweight visual language, and no runtime dependencies. Seven use Node.js 24 + SQLite for real community data; three run entirely in the browser. No remote fonts, trackers, CDN assets, build framework, or paid API.
+Ten small web projects with Russian interfaces, a shared lightweight visual language, and a pinned sharp pixel decoder. Seven use Node.js 24 + SQLite for real community data; three run entirely in the browser. No remote fonts, trackers, CDN assets, build framework, or paid API.
 
 | Repository | Route | Features | Runtime |
 | --- | --- | --- | --- |
@@ -17,9 +19,10 @@ Ten small web projects with Russian interfaces, a shared lightweight visual lang
 
 ## Run the combined development project
 
-Requires Node.js 24 or newer. No installation step:
+Requires Node.js 24 or newer. Install dependencies before first launch:
 
 ```sh
+npm ci
 npm start
 ```
 
@@ -89,3 +92,10 @@ node --test --experimental-test-coverage tests/server.test.mjs
 ```
 
 UI interactions must also be checked in a real browser. Automated server coverage does not measure browser canvas behavior, mobile layout, or abuse resistance under a production workload.
+
+
+## Pixel decoding and upload retry — 12 November
+
+Install with npm ci (Node.js 24); sharp 0.35.5 is now a pinned runtime dependency. A successful signature/dimension inspection is followed by a complete raw pixel decode with strict warning handling. PNG/JPEG/WebP stay supported. Limits: 500,000 input bytes, 2048×2048 pixels, two active decodes, no waiting queue, native decoder timeout 3 seconds, disabled libvips cache and one thread per operation. These are work limits, not a measured hard process-RSS limit or sandbox. Invalid images are never inserted as pending. The original accepted buffer is stored; server metadata stripping is not claimed by this change.
+
+The browser attaches requestId and keeps it for an unchanged retry. A matching owner/key/payload returns the saved post; changed payload with the same key returns 409, a deleted post returns 410. Receipt and post are committed together, with a second lookup inside the transaction to handle simultaneous decodes. Editing the form creates a new key. Reload/legacy clients without requestId do not get a global deduplication guarantee. Receipts retain only owner, key, fingerprint and post ID; total retention remains a separate policy. Back up before the additive table migration. Docker now installs pinned production dependencies.
